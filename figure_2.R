@@ -17,4 +17,35 @@ hm[sapply(hm,is.infinite)] <- 0
 hm <- hm[,mixedorder(colnames(hm))]
 
 pretty_col <- colorRampPalette(c('blue','darkgrey','yellow'))
-pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20))
+pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), kmeans_k = 10)
+
+#################Enriquecimiento usando GO#########################
+
+gene_lists <- load_gene_lists()
+
+sum_omics <- average_and_summarise_omics(omics) %>%
+  na.omit()
+
+plot <- sum_omics %>%
+  inner_join(gene_lists, by = c('ID' = 'Systematic ID')) %>%
+  separate(type, into = c('Direction','Molecule'), sep = ' ',remove = F)
+
+ggplot(plot, aes(x = time_point.x, y = avg_fold_change, fill = Molecule, color = Molecule)) +
+  geom_boxplot(aes(group = interaction(time_point.x, molecule), fill = Molecule, color = Molecule)) +
+  stat_summary(fun.y=median, geom="line") +
+  facet_grid(~Direction)
+
+##############################clustered transcripts##########################
+
+de_transcripts <- filter(gene_lists, type == 'Up RNA' | type == 'Down RNA')
+
+de_trans <- average_and_summarise_omics(omics) %>%
+  filter(molecule == 'RNA' & ID %in% de_transcripts$`Systematic ID`) %>%
+  spread(key = time_point.x, value = avg_fold_change) %>%
+  select(-molecule)
+
+de_trans[sapply(de_trans,is.infinite)] <- 0
+de_trans[sapply(de_trans,is.nan)] <- 0
+
+
+pheatmap(de_trans[,-1], cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), cutree_rows = 8)
