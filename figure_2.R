@@ -2,6 +2,7 @@ library(tidyverse)
 library(pheatmap)
 library(gtools)
 source('figure_functions.R')
+library(clusterProfiler)
 ##################Heatmap of omics##############################
 
 omics <- read_csv('../data/tidy_omics.csv')
@@ -37,6 +38,8 @@ ggplot(plot, aes(x = time_point.x, y = avg_fold_change, fill = Molecule, color =
 
 ##############################clustered transcripts##########################
 
+go_db <- load_go()
+
 de_transcripts <- filter(gene_lists, type == 'Up RNA' | type == 'Down RNA')
 
 de_trans <- average_and_summarise_omics(omics) %>%
@@ -48,4 +51,20 @@ de_trans[sapply(de_trans,is.infinite)] <- 0
 de_trans[sapply(de_trans,is.nan)] <- 0
 
 
-pheatmap(de_trans[,-1], cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), cutree_rows = 8)
+transcript_clusters <- pheatmap(de_trans[,-1], cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), kmeans_k =  6)
+cl <- data.frame(ID = de_trans$ID, cluster = transcript_clusters$kmeans$cluster)
+
+t <- clusterProfiler::compareCluster(data = cl, ID ~ cluster, fun = 'enricher', TERM2GENE = go_db$term2gene, TERM2NAME = go_db$term2name)
+
+proteomics <- average_and_summarise_omics(omics) %>%
+  inner_join(cl, by = 'ID')
+
+ggplot(proteomics, aes(x = time_point.x, y = avg_fold_change, colour = molecule)) +
+  stat_summary(fun.y=median, geom="line")+
+  geom_boxplot(aes(group = interaction(time_point.x, molecule))) +
+  facet_wrap(~cluster) +
+  theme_bw()
+
+ord_trans <- de_trans[order(cl$cluster),]
+n_cl <- as.vector(table(cl$cluster))
+pheatmap(ord_trans[,-1], cluster_cols = F, cluster_rows = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), gaps_row = n_cl)
