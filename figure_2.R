@@ -4,6 +4,7 @@ library(gtools)
 source('figure_functions.R')
 library(clusterProfiler)
 library(ggrepel)
+set.seed(502)
 ##################Heatmap of omics##############################
 
 omics <- read_csv('../data/tidy_omics.csv')
@@ -82,3 +83,5 @@ for(i in 1:length(n_cl))
 }
 pheatmap(ord_trans[,-1], cluster_cols = F, cluster_rows = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), gaps_row = t,
          labels_row = NULL)
+
+#######################Where are the ribosomes?############################
