@@ -20,4 +20,6 @@ hm[sapply(hm,is.nan)] <- 0
 hm <- hm[,mixedorder(colnames(hm))]
 
 pretty_col <- colorRampPalette(c('blue','darkgrey','yellow'))
-pheatmap(as.matrix(hm[,c(-1:-3)]), cluster_cols = F, color = pretty_col(20), breaks = seq(-5,5,length.out = 20))
+cls <- pheatmap(as.matrix(hm[,c(-1:-3)]), cluster_cols = F, color = pretty_col(20), breaks = seq(-5,5,length.out = 20), cutree_rows = 4,
+                labels_row = hm[,1]) 
+t <- cutree(cls$tree_row, k = 4)
