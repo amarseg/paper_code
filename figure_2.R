@@ -72,7 +72,7 @@ ggplot(proteomics, aes(x = time_point.x, y = avg_fold_change, colour = molecule)
   geom_boxplot(aes(group = interaction(time_point.x, molecule))) +
   facet_wrap(~cluster) +
   theme_bw()
-ggsave('clusters_in_protein.pdf')
+ggsave('../output/clusters_in_protein.pdf')
 
 ord_trans <- de_trans[order(cl$cluster),]
 n_cl <- as.vector(table(cl$cluster))

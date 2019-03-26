@@ -58,3 +58,7 @@ ggplot(haplo_ribo, aes(x = time_point.x, y = log2foldchange)) +
   stat_summary(fun.y = 'mean', geom = 'line', color = 'red') +
   facet_grid(rows = vars(behaviour)) +
   ylim(c(-5,5))
+
+
+################Paralogue ribosomes##################################
+
