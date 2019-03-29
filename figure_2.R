@@ -9,7 +9,7 @@ set.seed(502)
 
 omics <- read_csv('../data/tidy_omics.csv')
 
-hm <- average_and_summarise_omics(omics) %>% 
+hm <- average_and_summarise_omics(omics)[[1]] %>% 
   unite(temp,molecule,time_point.x) %>%
   spread(key = temp, value = avg_fold_change) %>%
   na.omit() %>%
@@ -20,13 +20,13 @@ hm[sapply(hm,is.infinite)] <- 0
 hm <- hm[,mixedorder(colnames(hm))]
 
 pretty_col <- colorRampPalette(c('blue','darkgrey','yellow'))
-pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), kmeans_k = 10)
+pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(10), breaks = seq(-5,5,length.out = 10))
 
 #################Enriquecimiento usando GO#########################
 
 gene_lists <- load_gene_lists()
 
-sum_omics <- average_and_summarise_omics(omics) %>%
+sum_omics <- average_and_summarise_omics(omics)[[1]] %>%
   na.omit()
 
 plot <- sum_omics %>%
@@ -64,7 +64,7 @@ ggplot(enrich_df, aes(y = -log10(p.adjust), x = Count, colour = cluster, label =
   geom_point() +
   geom_label_repel()
 
-proteomics <- average_and_summarise_omics(omics) %>%
+proteomics <- average_and_summarise_omics(omics)[[1]] %>%
   inner_join(cl, by = 'ID')
 
 ggplot(proteomics, aes(x = time_point.x, y = avg_fold_change, colour = molecule)) +
@@ -84,4 +84,18 @@ for(i in 1:length(n_cl))
 pheatmap(ord_trans[,-1], cluster_cols = F, cluster_rows = F, color = pretty_col(20), breaks = seq(-10,10,length.out = 20), gaps_row = t,
          labels_row = NULL)
 
-#######################Where are the ribosomes?############################
+#######################Get protein clusters and do heatmaps############################
+prot_cl <- proteomics %>%
+  filter(molecule == 'Protein')
+
+for(i in unique(prot_cl$cluster))
+{
+  sub_data <- prot_cl %>%
+    filter(cluster == i) %>%
+    spread(key = time_point.x, value = avg_fold_change)
+  file_name = paste0('Proteomics_cluster_',i,'.pdf')
+  
+  pdf(file_name)
+  pheatmap(sub_data[,c(-1:-3)], labels_row = sub_data$ID, cluster_cols = F,color = pretty_col(10), breaks = seq(-5,5,length.out = 10), main = i)
+  dev.off() 
+}

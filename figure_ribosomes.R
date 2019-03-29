@@ -2,6 +2,7 @@ library(tidyverse)
 library(pheatmap)
 library(gtools)
 source('figure_functions.R')
+library(ggrepel)
 
 haplo <- read_csv('../data/haploinsufficient/tidy_kim.csv')
 ribosomes <- read_delim('../data/GO_ribosome_biogenesis.tsv', delim = '\t')
@@ -52,12 +53,13 @@ avg_omics <- average_and_summarise_omics(omics)[[2]]
 haplo_ribo <- inner_join(avg_omics, haplo, by ='ID') %>%
   inner_join(ribosomes, by = c('ID' = 'Systematic ID'))
 
-ggplot(haplo_ribo, aes(x = time_point.x, y = log2foldchange)) +
+ggplot(haplo_ribo, aes(x = time_point.x, y = log2foldchange, label = ID)) +
   geom_point(alpha = 0.8, color = 'grey') +
   stat_summary(fun.y = 'mean', geom = 'line', aes(group = ID)) +
   stat_summary(fun.y = 'mean', geom = 'line', color = 'red') +
   facet_grid(rows = vars(behaviour)) +
-  ylim(c(-5,5))
+  ylim(c(-5,5)) +
+  geom_label_repel()
 
 
 ################Paralogue ribosomes##################################
