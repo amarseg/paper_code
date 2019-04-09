@@ -4,6 +4,20 @@ library(gtools)
 source('figure_functions.R')
 library(ggrepel)
 
+load_essential_list <- function(){
+  essential <- read_tsv('../data/essential_genes.tsv') %>%
+    add_column(phenotype = 'essential')
+  non_ess <- read_tsv('../data/non_essential.tsv') %>%
+    add_column(phenotype = 'non-essential')
+  
+  pheno_table <- bind_rows(essential, non_ess)
+  return(pheno_table)
+}
+
+
+
+
+
 haplo <- read_csv('../data/haploinsufficient/tidy_kim.csv')
 ribosomes <- read_delim('../data/GO_ribosome_biogenesis.tsv', delim = '\t')
 omics <- read_csv('../data/tidy_omics.csv')
@@ -58,9 +72,48 @@ ggplot(haplo_ribo, aes(x = time_point.x, y = log2foldchange, label = ID)) +
   stat_summary(fun.y = 'mean', geom = 'line', aes(group = ID)) +
   stat_summary(fun.y = 'mean', geom = 'line', color = 'red') +
   facet_grid(rows = vars(behaviour)) +
-  ylim(c(-5,5)) +
-  geom_label_repel()
+  ylim(c(-5,5)) 
 
 
 ################Paralogue ribosomes##################################
+ribo_table <- read_csv('../data/RP.table.280911.csv')
+ribo_for_hm <- data.frame(row.names = ribo_table$Sp_name, ribo_type = ribo_table$Sp_family)
 
+hm <- average_and_summarise_omics(omics)[[1]] %>%
+  inner_join(ribo_table, by = c('ID' = 'Sp_name')) %>%
+  unite(temp,molecule,time_point.x) %>%
+  spread(key = temp, value = avg_fold_change) %>%
+  na.omit() %>%
+  as.data.frame() 
+
+hm <- hm[,grep(colnames(hm), pattern = 'RNA|ID')]
+
+hm[sapply(hm,is.infinite)] <- 0
+hm[sapply(hm,is.nan)] <- 0
+
+
+hm <- hm[,mixedorder(colnames(hm))]
+
+# pretty_col <- colorRampPalette(c('blue','darkgrey','yellow'))
+# cls <- pheatmap(as.matrix(hm[,c(-1:-3)]), cluster_cols = F, color = pretty_col(20), breaks = seq(-5,5,length.out = 20),
+#                 labels_row = hm[,1], annotation_row = ribo_for_hm) 
+# 
+# k_means_cls <- data.frame(IDs = hm[,1], k_means_cluster = cls$kmeans$cluster)
+
+phenotypes <- load_essential_list()
+
+thing <- average_and_summarise_omics(omics)[[1]] %>%
+  inner_join(ribo_table, by = c('ID' = 'Sp_name')) %>%
+  inner_join(phenotypes, by = c('ID' = 'Systematic ID'))
+
+ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = phenotype)) +
+  geom_point() +
+  facet_wrap(~Sc_family)
+
+
+ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = phenotype)) +
+  geom_point() +
+  stat_summary(fun.y = 'mean', geom = 'line', aes(group = phenotype)) +
+  ylim(c(-5,5)) +
+  facet_wrap(~phenotype) +
+  geom_smooth()
