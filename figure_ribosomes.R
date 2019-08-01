@@ -15,7 +15,7 @@ load_essential_list <- function(){
 }
 
 
-
+gene_lists <- load_gene_lists()
 
 
 haplo <- read_csv('../data/haploinsufficient/tidy_kim.csv')
@@ -104,16 +104,34 @@ phenotypes <- load_essential_list()
 
 thing <- average_and_summarise_omics(omics)[[1]] %>%
   inner_join(ribo_table, by = c('ID' = 'Sp_name')) %>%
-  inner_join(phenotypes, by = c('ID' = 'Systematic ID'))
+  inner_join(phenotypes, by = c('ID' = 'Systematic ID')) %>%
+  left_join(haplo, by = 'ID')
 
 ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = phenotype)) +
   geom_point() +
-  facet_wrap(~Sc_family)
+  facet_wrap(~Sp_family)
+
+ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = behaviour)) +
+  geom_point() +
+  facet_wrap(~Sp_family)
 
 
 ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = phenotype)) +
-  geom_point() +
+  #geom_point() +
   stat_summary(fun.y = 'mean', geom = 'line', aes(group = phenotype)) +
-  ylim(c(-5,5)) +
-  facet_wrap(~phenotype) +
+  #ylim(c(-5,5)) +
+  #facet_wrap(~phenotype) +
   geom_smooth()
+
+ggplot(thing, aes(x = time_point.x, y = avg_fold_change, colour = behaviour)) +
+  #geom_point() +
+  stat_summary(fun.y = 'mean', geom = 'line', aes(group = phenotype)) +
+  #facet_wrap(~behaviour) +
+  geom_smooth()
+
+only_de <- thing %>%
+  add_column(de = if_else(.$ID %in% gene_lists$`Systematic ID`, 'DE','Not DE'))
+
+ggplot(only_de , aes(x = time_point.x, y = avg_fold_change, colour = behaviour, shape = de)) +
+  geom_point() +
+  facet_wrap(~Sp_family)
