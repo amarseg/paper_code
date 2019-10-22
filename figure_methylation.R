@@ -7,7 +7,7 @@ omics <- read_csv('../data/tidy_omics.csv')
 
 normalised_omics <- average_and_summarise_omics(omics)
 
-high <- normalised_omics %>%
+high <- normalised_omics[[1]] %>%
   filter(ID %in% high_transcripts[,1] & molecule == 'RNA')
 
 
@@ -15,9 +15,9 @@ high[is.nan(high$avg_fold_change),]$avg_fold_change <- NA
 high[is.infinite(high$avg_fold_change),]$avg_fold_change <- NA
 
 high$chromosome <- 'Unknown' 
-high[str_detect(high$ID, 'AC'),]$chromosome <- 'I'
-high[str_detect(high$ID, 'BC'),]$chromosome <- 'II'
-high[str_detect(high$ID, 'CC'),]$chromosome <- 'III'
+high[str_detect(high$ID, 'SPA'),]$chromosome <- 'I'
+high[str_detect(high$ID, 'SPB'),]$chromosome <- 'II'
+high[str_detect(high$ID, 'SPC'),]$chromosome <- 'III'
 
 ggplot(high, aes(x = time_point.x, y = avg_fold_change, colour = chromosome)) +
   geom_point( ) +

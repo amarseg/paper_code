@@ -1,7 +1,7 @@
 library(tidyverse)
 library(pheatmap)
 library(ggpubr)
-library(ggt)
+
 #Load data#
 all_data <- read_csv('../data/screening_data/live_cell/output_data_cleaned.csv') %>%
   rename('ID' = `Systematic ID`) %>%
