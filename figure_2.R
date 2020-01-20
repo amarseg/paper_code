@@ -6,6 +6,8 @@ library(clusterProfiler)
 library(ggrepel)
 set.seed(502)
 ##################Heatmap of omics##############################
+gene_lists <- load_gene_lists()
+go_db <- load_go()
 
 omics <- read_csv('../data/tidy_omics.csv')
 
@@ -13,18 +15,55 @@ hm <- average_and_summarise_omics(omics)[[1]] %>%
   unite(temp,molecule,time_point.x) %>%
   spread(key = temp, value = avg_fold_change) %>%
   na.omit() %>%
-  as.data.frame()
+  as.data.frame() %>%
+  filter(ID %in% gene_lists$`Systematic ID`)
 
 hm[sapply(hm,is.infinite)] <- 0
 
 hm <- hm[,mixedorder(colnames(hm))]
 
 pretty_col <- colorRampPalette(c('blue','darkgrey','yellow'))
-pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(10), breaks = seq(-5,5,length.out = 10))
+heatmap_significant_molecules<- pheatmap(as.matrix(hm[,-1]), cluster_cols = F, color = pretty_col(10), breaks = seq(-5,5,length.out = 10),
+         clustering_method = 'ward.D2',
+         cutree_rows = 4)
 
+cls <- tibble(cluster = cutree(heatmap_significant_molecules$tree_row, k = 4),
+              Systematic_ID = hm$ID)
+
+
+cl_go_enrichment <- clusterProfiler::compareCluster(data = cls, 
+                                     Systematic_ID ~ cluster, 
+                                     fun = 'enricher', 
+                                     TERM2GENE = go_db$term2gene, 
+                                     TERM2NAME = go_db$term2name)
+
+cl_go_enrichment_df <- as.data.frame(cl_go_enrichment)
+dotplot(cl_go_enrichment, showCategory = 50)
+
+####Plot genes belonging to GO category#####
+cl_go_enrichment_df %>%
+  mutate(geneID = str_split(geneID, pattern = '/')) %>%
+  unnest() %>%
+  inner_join(average_and_summarise_omics(omics)[[2]], by = c('geneID' = 'ID')) %>%
+  mutate(broad_description = case_when(str_detect(Description ,'ribo|translation') ~ 'Translation',
+                                       str_detect(Description , 'ubiquitin|endopeptidase') ~ 'Protein degradation',
+                                       str_detect(Description, 'glycolisis|tricarboxylic') ~ 'Metabolism',
+                                       str_detect(Description, 'post|anaphase') ~ 'Cell Cycle',
+                                       TRUE ~ Description)) %>%
+  mutate(broad_description = str_to_sentence(broad_description)) %>%
+  group_by(cluster, broad_description, molecule, time_point.x, replicate) %>%
+  summarise(median_fold_change = median(log2foldchange)) %>%
+  filter(cluster!= 4) %>%
+  ggplot(aes(x = time_point.x , y = median_fold_change, group = broad_description, colour = broad_description)) +
+  geom_point(alpha = 0.5) +
+  stat_summary(fun.y = 'median', geom = 'line', size = 1.2) +
+  facet_wrap(~cluster*molecule, scales = 'free') +
+  theme_bw() +
+  scale_color_brewer(palette = 'Dark2')
+
+ggsave('pseudo_GO.pdf')
 #################Enriquecimiento usando GO#########################
 
-gene_lists <- load_gene_lists()
 
 sum_omics <- average_and_summarise_omics(omics)[[1]] %>%
   na.omit()
@@ -39,8 +78,6 @@ ggplot(plot, aes(x = time_point.x, y = avg_fold_change, fill = Molecule, color =
   facet_grid(~Direction)
 
 ##############################clustered transcripts##########################
-
-go_db <- load_go()
 
 de_transcripts <- filter(gene_lists, type == 'Up RNA' | type == 'Down RNA')
 

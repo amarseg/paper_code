@@ -1,6 +1,9 @@
 average_and_summarise_omics <- function(tidy_omics)
 {
   require(tidyverse)
+  tidy_omics <- tidy_omics %>%
+    mutate(read_number = read_number + 0.00001)
+  
   tp0 <- dplyr::filter(tidy_omics,time_point == 0)
   
   normalised_omics <- tidy_omics %>%
