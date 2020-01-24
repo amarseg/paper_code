@@ -33,6 +33,7 @@ plot <- sum_omics %>%
   inner_join(gene_lists, by = c('ID' = 'Systematic ID')) %>%
   separate(type, into = c('Direction','Molecule'), sep = ' ',remove = F)
 
+
 ggplot(plot, aes(x = time_point.x, y = avg_fold_change, fill = Molecule, color = Molecule)) +
   geom_boxplot(aes(group = interaction(time_point.x, molecule), fill = Molecule, color = Molecule)) +
   stat_summary(fun.y=median, geom="line") +
