@@ -79,8 +79,8 @@ ggplot(all_areas, aes(x = reorder(Name, AreaShape_Area, FUN = 'median'), y = Are
   geom_boxplot(data = filter(all_areas, Name == 'wt'), colour = 'red') +
   theme_cowplot() + 
   theme(axis.text.x = element_text(angle = 90, hjust = 1),
-        text = element_text(size = 10),
-        axis.text = element_text(size = 10)) +
+        text = element_text(size = 6),
+        axis.text = element_text(size = 4)) +
   ylab('Area [Number of pixels]') +
   xlab('') +
   scale_y_continuous(limits = c(0,2000))
