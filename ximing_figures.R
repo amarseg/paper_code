@@ -8,7 +8,7 @@ library(ggrepel)
 isx_data <- read_csv('../data/isx_data.csv') %>%
   mutate(time = time - 1)
 
-int_genes <- c('clr1','clr2','clr3','mit1','ccq1','chp2')
+int_genes <- c('clr1','clr2','clr3','mit1','ccq1','chp2','set2')
 
 gene_ids <- read_tsv('ftp://ftp.pombase.org/pombe/names_and_identifiers/gene_IDs_names_products.tsv',
                      col_names = c('PomBaseID','second_id','name','chromosome','description',

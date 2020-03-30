@@ -60,15 +60,19 @@ load_omics_data <- function()
   require(DESeq2)
   
   #RNa procesing
-  rna <- read_csv('rna_seq.csv') 
+  rna <- read_csv('raw_counts.csv') 
   size_factors <- rna %>%
     dplyr::select(-ID) %>%
-    estimateSizeFactorsForMatrix()
+    estimateSizeFactorsForMatrix() 
   
-  rna[,-1] <- sweep(rna[,-1],MARGIN=2,FUN="/",STATS=size_factors) %>%
-    as.data.frame()
+  norm_rna <- rna
+  norm_rna[,-1] <- sweep(norm_rna[,-1],MARGIN=2,FUN="/",STATS=size_factors) %>%
+    as.data.frame() 
   
-  final_rna <- rna %>%
+  write_csv(x = norm_rna,
+            path = 'deseq_normalised_counts.csv')
+  
+  final_rna <- norm_rna %>%
     gather(key = sample_name, value  = read_number, -ID) %>%
     separate(sample_name, into = c('not needed','time_point','replicate'), sep = '_') %>%
     dplyr::select(-`not needed`) %>%
@@ -76,18 +80,33 @@ load_omics_data <- function()
     mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
     add_column(molecule = 'RNA')
   
+  transcript_length <- read_csv('../data/genes.csv') %>%
+    select(PomBaseID, transcript_length)
+  
+  rpkm <- rna %>%
+    gather(key = sample_name, value  = read_number, -ID) %>%
+    group_by(sample_name) %>%
+    mutate(total_counts = sum(read_number)) %>%
+    ungroup() %>%
+    left_join(transcript_length, by = c('ID' = 'PomBaseID')) %>%
+    mutate(rpkm = (read_number*10^9)/(total_counts * transcript_length)) %>%
+    select(rpkm, ID, sample_name) %>%
+    spread(value = rpkm, key = sample_name) %>%
+    write_csv('../data/rpkm.csv')
   
   #Protein procesing
   prot <- read_delim('SQ_Results_PROTEIN.tsv', delim = '\t') %>%
     dplyr::select(proteinName, b018p004AM_T0_01:b018p004AM_T11_G3_02) %>%
     filter(str_detect(proteinName, pattern = 'SP')) %>%
+    write_csv('normalised_prot.csv') %>%
     gather(key = sample_name, value = read_number, -proteinName) %>%
     separate(sample_name, into = c('no','time_point','replicate','technical_replicate'), sep = '_') %>%
     separate(proteinName, into = c('ID','gene_name','chr','desc'), sep = '\\|') %>%
     mutate(time_point = str_extract(time_point, pattern = '[:digit:]{1,2}')) %>%
     mutate(replicate = str_extract(replicate, pattern = '[:digit:]{1}')) %>%
     dplyr::select(-(gene_name:desc), -no) %>%
-    add_column(molecule = 'Protein')
+    add_column(molecule = 'Protein') %>%
+    write_csv('proteomics_data.csv')
   
   t <- prot[which(is.na(prot$technical_replicate)),]
   t$technical_replicate <- t$replicate  
@@ -98,6 +117,8 @@ load_omics_data <- function()
   mean_prot <- prot %>%
     group_by(ID, time_point, replicate, molecule) %>%
     summarise_at('read_number', mean)
+  
+  prot
   
   omics_dataset <- bind_rows(final_rna, mean_prot) %>%
     return()
